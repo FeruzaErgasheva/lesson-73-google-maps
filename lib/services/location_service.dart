@@ -7,7 +7,7 @@ class LocationService {
 
   static bool _isServiceEnabled = false;
   static PermissionStatus _permissionStatus = PermissionStatus.denied;
-  static LocationData? currentLocation;
+ static LocationData currentLocation = LocationData.fromMap({});
 
   static Future<void> init() async {
     await _checkService();
@@ -45,10 +45,12 @@ class LocationService {
   }
 
   // hozirgi joylashuvni olamiz
-  static Future<void> getCurrentLocation() async {
+  static Future<LocationData> getCurrentLocation() async {
     if (_isServiceEnabled && _permissionStatus == PermissionStatus.granted) {
       currentLocation = await _location.getLocation();
+      return currentLocation;
     }
+    return currentLocation;
   }
 
   static Stream<LocationData> getLiveLocation() async* {

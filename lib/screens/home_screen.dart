@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:google_places_autocomplete_text_field/google_places_autocomplete_text_field.dart';
 import 'package:lesson72_location/services/location_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Set<Marker> myMarkers = {};
   Set<Polyline> polylines = {};
   List<LatLng> myPositions = [];
+  final TextEditingController _searchController = TextEditingController();
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
@@ -27,9 +29,10 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
 
     Future.delayed(Duration.zero, () async {
-      await LocationService.getCurrentLocation();
-      setState(() {});
-      // watchMyLocation();
+      var location = await LocationService.getCurrentLocation();
+      setState(() {
+        myCurrentPosition = LatLng(location.latitude!, location.longitude!);
+      });
     });
   }
 
@@ -41,7 +44,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void watchMyLocation() {
     LocationService.getLiveLocation().listen((location) {
-      print("Live location: $location");
+      setState(() {
+        myCurrentPosition = LatLng(location.latitude!, location.longitude!);
+      });
     });
   }
 
@@ -61,16 +66,16 @@ class _HomeScreenState extends State<HomeScreen> {
         myPositions[0],
         myPositions[1],
       ).then((List<LatLng> positions) {
-        polylines.add(
-          Polyline(
-            polylineId: PolylineId(UniqueKey().toString()),
-            color: Colors.blue,
-            width: 5,
-            points: positions,
-          ),
-        );
-
-        // setState(() {});
+        setState(() {
+          polylines.add(
+            Polyline(
+              polylineId: PolylineId(UniqueKey().toString()),
+              color: Colors.blue,
+              width: 5,
+              points: positions,
+            ),
+          );
+        });
       });
     }
   }
@@ -81,79 +86,73 @@ class _HomeScreenState extends State<HomeScreen> {
 
     print("CurrentLocation: $myLocation");
 
-    return Scaffold(
-      appBar: AppBar(
-        actions: [
-          IconButton(
-            onPressed: () {
-              mapController.animateCamera(
-                CameraUpdate.zoomOut(),
-              );
-            },
-            icon: Icon(Icons.remove_circle),
-          ),
-          IconButton(
-            onPressed: () {
-              mapController.animateCamera(
-                CameraUpdate.zoomIn(),
-              );
-            },
-            icon: Icon(Icons.add_circle),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          GoogleMap(
-            buildingsEnabled: true,
-            onMapCreated: _onMapCreated,
-            initialCameraPosition: CameraPosition(
-              target: najotTalim,
-              zoom: 16.0,
+    return SafeArea(
+      child: Scaffold(
+        body: Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            GoogleMap(
+              buildingsEnabled: true,
+              onMapCreated: _onMapCreated,
+              initialCameraPosition: CameraPosition(
+                target: najotTalim,
+                zoom: 16.0,
+              ),
+              trafficEnabled: true,
+              onCameraMove: onCameraMove,
+              mapType: MapType.normal,
+              myLocationEnabled: true,
+              myLocationButtonEnabled: true,
+              markers: {
+                Marker(
+                  markerId: const MarkerId("myCurrentPosition"),
+                  icon: BitmapDescriptor.defaultMarkerWithHue(
+                    BitmapDescriptor.hueBlue,
+                  ),
+                  position: myCurrentPosition,
+                  infoWindow: const InfoWindow(),
+                ),
+                ...myMarkers,
+              },
+              polylines: polylines,
             ),
-            trafficEnabled: true,
-            onCameraMove: onCameraMove,
-            mapType: MapType.normal,
-            myLocationEnabled: true,
-            myLocationButtonEnabled: true,
-            markers: {
-              Marker(
-                markerId: const MarkerId("najotTalim"),
-                icon: BitmapDescriptor.defaultMarker,
-                position: najotTalim,
-                infoWindow: const InfoWindow(
-                  title: "Najot Ta'lim",
-                  snippet: "Xush kelibsiz",
+            Align(
+              alignment: Alignment.topCenter,
+              child: GooglePlacesAutoCompleteTextFormField(
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderSide: BorderSide.none),
+                  hintText: "Search",
+                  filled: true,
+                  fillColor: Colors.grey.withOpacity(0.9),
                 ),
+                textEditingController: _searchController,
+                googleAPIKey: "AIzaSyBEjfX9jrWudgRcWl2scld4R7s0LtlaQmQ",
+                debounceTime: 400,
+                countries: ["de"],
+                isLatLngRequired: true,
+                getPlaceDetailWithLatLng: (prediction) {
+                  setState(() {
+                    myCurrentPosition = LatLng(double.parse(prediction.lat!),
+                        double.parse(prediction.lng!));
+                  });
+                  mapController.animateCamera(
+                    CameraUpdate.newLatLng(myCurrentPosition),
+                  );
+                },
+                itmClick: (prediction) {
+                  _searchController.text = prediction.description!;
+                  _searchController.selection = TextSelection.fromPosition(
+                      TextPosition(offset: prediction.description!.length));
+                },
               ),
-              Marker(
-                markerId: const MarkerId("myCurrentPosition"),
-                icon: BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueBlue,
-                ),
-                position: myCurrentPosition,
-                infoWindow: const InfoWindow(
-                  title: "Najot Ta'lim",
-                  snippet: "Xush kelibsiz",
-                ),
-              ),
-              ...myMarkers,
-            },
-            polylines: polylines,
-          ),
-          // const Align(
-          //   child: Icon(
-          //     Icons.place,
-          //     color: Colors.blue,
-          //     size: 60,
-          //   ),
-          // ),
-        ],
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
-      floatingActionButton: FloatingActionButton(
-        onPressed: addLocationMarker,
-        child: const Icon(Icons.add),
+            ),
+          ],
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+        floatingActionButton: FloatingActionButton(
+          onPressed: addLocationMarker,
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }

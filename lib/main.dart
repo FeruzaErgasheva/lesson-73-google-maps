@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lesson72_location/screens/home_screen.dart';
 import 'package:lesson72_location/services/location_service.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
