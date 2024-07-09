@@ -1,3 +1,5 @@
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 
 class LocationService {
@@ -51,5 +53,33 @@ class LocationService {
 
   static Stream<LocationData> getLiveLocation() async* {
     yield* _location.onLocationChanged;
+  }
+
+  static Future<List<LatLng>> fetchPolylinePoints(
+    LatLng from,
+    LatLng to,
+  ) async {
+    final polylinePoints = PolylinePoints();
+
+    final result = await polylinePoints.getRouteBetweenCoordinates(
+      googleApiKey: "AIzaSyBEjfX9jrWudgRcWl2scld4R7s0LtlaQmQ",
+      request: PolylineRequest(
+        origin: PointLatLng(from.latitude, from.longitude),
+        destination: PointLatLng(to.latitude, to.longitude),
+        mode: TravelMode.transit,
+      ),
+    );
+
+    // result.
+
+    // print(result.);
+
+    if (result.points.isNotEmpty) {
+      return result.alternatives
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
+    }
+
+    return [];
   }
 }
